@@ -46,6 +46,7 @@ function discKey(label) {
   if (s.includes("beursault")) return "beursault";
   if (s.includes("3d") || s.includes("trois")) return "3d";
   if (s.includes("nature")) return "nature";
+  if (s.includes("run") || s.includes("course") || s.includes("vélo") || s.includes("velo")) return "run";
   if (s.includes("18") || s.includes("salle") || s.includes("indoor")) return "18m";
   if (s.includes("extérieur") || s.includes("exterieur") || s.includes("tae") || s.includes("outdoor")) return "tae";
   if (s.includes("loisir")) return "loisir";
@@ -53,12 +54,20 @@ function discKey(label) {
   return "autre";
 }
 const DISC_COLOR = {
-  tae:      "#f6e7a6", paraext:  "#cfe0ff", para18m: "#c9d4ea",
-  campagne: "#c8a85a", beursault:"#8b7355", "3d":    "#e3cdb7",
-  nature:   "#a8c68f", "18m":    "#f3d1ab", loisir:  "#f2c6ea",
-  jeune:    "#e2d5ff", autre:    "#cbd5e1",
+  tae:      "#ffe600", "18m":    "#1a56db", nature:   "#6b7c3a",
+  "3d":     "#7c4a2a", campagne: "#ffe600", beursault:"#ffffff",
+  loisir:   "#e91e8c", jeune:    "#7c3aed", run:      "#e53935",
+  para18m:  "#4fc3f7", paraext:  "#ff6d00", autre:    "#94a3b8",
 };
-const DISC_TEXT = { campagne:"#fff", beursault:"#fff", nature:"#fff" };
+// border color: [fill, stroke]
+const DISC_BORDER = {
+  tae:      "rgba(0,0,0,.5)",   "18m":    "rgba(255,255,255,.5)",
+  nature:   "rgba(0,0,0,.35)",  "3d":     "rgba(0,0,0,.35)",
+  campagne: "rgba(0,0,0,.9)",   beursault:"rgba(0,0,0,.8)",
+  loisir:   "rgba(0,0,0,.3)",   jeune:    "rgba(255,255,255,.5)",
+  run:      "rgba(255,255,255,.5)", para18m:"rgba(0,0,0,.3)",
+  paraext:  "rgba(255,255,255,.4)", autre:  "rgba(0,0,0,.3)",
+};
 const DISC_LABELS = {
   tae:      "TAE – Tir Extérieur",
   "18m":    "Tir en Salle 18m",
@@ -66,10 +75,11 @@ const DISC_LABELS = {
   campagne: "Tir en Campagne",
   nature:   "Tir Nature",
   beursault:"Tir Beursault",
-  paraext:  "Para-tir extérieur",
-  para18m:  "Para-tir salle",
+  run:      "Run Archerie",
   loisir:   "Loisirs",
   jeune:    "Jeunes / Poussins",
+  para18m:  "Para-tir salle",
+  paraext:  "Para-tir extérieur",
   autre:    "Autre",
 };
 
@@ -169,8 +179,8 @@ function addLegend() {
     div.innerHTML = Object.entries(DISC_LABELS)
       .filter(([k]) => k !== "autre")
       .map(([k, label]) => {
-        const bg  = DISC_COLOR[k] || "#94a3b8";
-        const brd = DISC_TEXT[k]  ? "rgba(255,255,255,.5)" : "rgba(0,0,0,.3)";
+        const bg  = DISC_COLOR[k]  || "#94a3b8";
+        const brd = DISC_BORDER[k] || "rgba(0,0,0,.3)";
         return `<div class="leg-row"><span class="leg-dot" style="background:${bg};border-color:${brd}"></span>${label}</div>`;
       }).join("");
     return div;
@@ -181,10 +191,10 @@ function addLegend() {
 function makeIcon(disc) {
   const k   = discKey(disc);
   const bg  = DISC_COLOR[k]  || "#94a3b8";
-  const txt = DISC_TEXT[k]   || "#111";
+  const brd = DISC_BORDER[k] || "rgba(0,0,0,.35)";
   return L.divIcon({
     className: "",
-    html: `<div style="width:14px;height:14px;border-radius:999px;background:${bg};border:2px solid ${txt === '#111' ? 'rgba(0,0,0,.35)' : 'rgba(255,255,255,.6)'};box-shadow:0 2px 6px rgba(0,0,0,.25)"></div>`,
+    html: `<div style="width:14px;height:14px;border-radius:999px;background:${bg};border:2px solid ${brd};box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
     iconSize: [14, 14], iconAnchor: [7, 7],
   });
 }
