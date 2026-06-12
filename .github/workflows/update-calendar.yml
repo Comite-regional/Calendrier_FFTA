@@ -1,0 +1,45 @@
+name: Mise à jour calendrier FFTA
+
+on:
+  schedule:
+    # Chaque jour à 06:00 UTC (08:00 heure de Paris)
+    - cron: "0 6 * * *"
+  workflow_dispatch: # permet un déclenchement manuel depuis GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: pip install requests
+
+      - name: Récupérer les épreuves FFTA
+        env:
+          FFTA_SESSION_IDENTITE: ${{ secrets.FFTA_SESSION_IDENTITE }}
+          FFTA_REGION: CR12
+          OUTPUT_CSV: concours26.csv
+        run: python fetch_ffta.py
+
+      - name: Commit et push si le CSV a changé
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add concours26.csv
+          if git diff --staged --quiet; then
+            echo "Aucune modification détectée, pas de commit."
+          else
+            git commit -m "chore: mise à jour automatique calendrier FFTA $(date -u '+%Y-%m-%d')"
+            git push
+          fi

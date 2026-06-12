@@ -1,0 +1,47 @@
+type;titre;date_debut;date_fin;lieu;precision;importance
+regroupement;Regroupement groupe performance Nord-Est;2026-01-24;2026-01-24;Châteaubriant (44);;moyenne
+championnat;Championnat régional salle Para;2026-01-31;2026-01-31;Daumeray (49);;haute
+championnat;Championnat régional salle jeune;2026-02-01;2026-02-01;Daumeray (49);;haute
+championnat;Championnat régional salle adulte;2026-02-07;2026-02-08;La Garnache (85);;haute
+Codir;Comité directeur;2026-02-12;2026-02-12;Visio-Conférence;;haute
+championnat;Coupe régionale d’hiver;2026-02-14;2026-02-15;Montoir de Bretagne (44);;haute
+france;Championnat de France jeune;2026-02-20;2026-02-22;Yzeure (03);;haute
+france;Championnat de France adulte;2026-02-27;2026-02-27;Halle Carpentier Paris (75);;haute
+tournoi;Tournoi des sirènes et Ulysse;2026-03-07;2026-03-07;Les Sables d’Olonne (85);;moyenne
+deadline;Date limite candidature au Championnat régional salle 2027;2026-03-20;2026-03-31;;Fin mars 2026;haute
+Codir;Comité directeur;2026-03-12;2026-03-12;Visio-Conférence;;Haute
+institutionnel;Lancement calendrier concours salle 2026-2027;2026-04-01;2026-05-15;;Début avril 2026;moyenne
+regroupement;Regroupement groupe Jeune Elite + Performance;2026-04-04;2026-04-06;CREPS (44);;moyenne
+Codir;Comité directeur;2026-04-11;2026-04-11;CREPS (44);;Haute
+DRE;1ère manche DRE;2026-04-24;2026-04-24;Nantes (44);;moyenne
+TRJ;TRJ n°1;2026-05-02;2026-05-02;Daumeray (49);;moyenne
+DRE;2ème manche DRE;2026-05-09;2026-05-10;Daumeray (49);;moyenne
+Codir;Comité directeur;2026-05-21;2026-05-21;Visio-Conférence;;haute
+TRJ;TRJ n°2;2026-05-30;2026-05-30;Montaigu (85);;moyenne
+DRE;3ème manche DRE;2026-06-14;2026-06-14;Murs Erigné (49);;moyenne
+Codir;Comité directeur;2026-06-18;2026-06-18;Visio-Conférence;;haute
+championnat;Championnat régional TAEN & TAEI;2026-06-27;2026-06-28;Carquefou (44);;haute
+France;Tournoi National des Mixtes;2026-07-04;2026-07-05;Chennevières-sur-Marne (91);;moyenne
+Codir;Comité directeur;2026-07-11;2026-07-11;CREPS (44);;Haute
+deadline;Date limite candidature au Championnat régional extérieur 2027;2026-03-20;2026-03-31;;Fin mars 2026;haute
+institutionnel;Lancement calendrier concours extérieur 2026-2027;2026-10-01;2026-10-10;;Début octobre 2026;moyenne
+institutionnel;Appel à candidature;2026-11-21;2026-11-28;Maine-et-Loire;21 ou 28 novembre 2026;moyenne
+institutionnel;Comité directeur;2026-09-19;2026-09-19;CREPS (44);;Haute
+France;Championnat de France Para à 18m;2026-03-06;2026-03-08;Richelieu (37);;Haute
+TNJ;TNJ 1;2026-04-24;2026-04-26;Sarcelles (95);;Haute
+France;championnat de France Tir Nature par équipe de club;2026-05-22;2026-05-22;Agnac (47);;Haute
+France;Championnat de France Tir Nature;2026-05-23;2026-05-24;Agnac (47);;Haute
+TNJ;TNJ 2;2026-05-23;2026-05-24;Compiègne (60);;Haute
+France;Championnat de France Para TAE;2026-06-27;2026-06-28;Carpiquet (14);;Haute
+TNJ;TNJ 3;2026-06-27;2026-06-28;Rochefort (17);;Haute
+France;Finale DR Arc classique;2026-07-11;2026-07-12;Brienon sur Armencon (89);;Haute
+France;Finale DR Arc à poulie;2026-07-11;2026-07-12;Brienon sur Armencon (89);;Haute
+France;Finale championnat de France D2;2026-07-18;2026-07-19;Smarves (86);;Haute
+France;Championnat de France par catégorie TAE;2026-07-24;2026-07-26;Riom (63);;Haute
+France;Championnat de france Jeune TAE;2026-07-29;2026-07-30;Saint Avertin (37);;Haute
+France;Championnat de France double Mixte jeune TAE;2026-07-29;2026-07-30;Saint Avertin (37);;Haute
+France;Championnat de france jeune par équipe de club TAE;2026-07-31;2026-07-31;Saint Avertin (37);;Haute
+France;Championnat de France élite TAE;2026-08-01;2026-08-02;Saint Avertin (37);;Haute
+France;Championnat de France double Mixte Adulte TAE;2026-08-01;2026-08-02;Saint Avertin (37);;Haute
+France;Championnat de France par catégorie Campagne;2026-08-06;2026-08-09;Parc d’Olhain (62);;Haute
+France;Championnat de France par catégorie 3D;2026-08-13;2026-08-16;Ecouen (76);;Haute
