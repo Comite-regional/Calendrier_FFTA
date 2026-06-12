@@ -12,43 +12,58 @@
 
 <header class="topbar">
   <img class="brand-logo" src="logo.png" alt="Logo"/>
-  <div class="filters-bar">
-    <div class="field">
-      <select id="f-region" title="Région">
-        <option value="">Toutes les régions</option>
-        <option value="CR01">Auvergne-Rhône-Alpes</option>
-        <option value="CR02">Bourgogne-Franche-Comté</option>
-        <option value="CR03">Bretagne</option>
-        <option value="CR04">Centre-Val de Loire</option>
-        <option value="CR05">Corse</option>
-        <option value="CR06">Grand Est</option>
-        <option value="CR07">Hauts-de-France</option>
-        <option value="CR08">Île-de-France</option>
-        <option value="CR09">Normandie</option>
-        <option value="CR10">Nouvelle-Aquitaine</option>
-        <option value="CR11">Occitanie</option>
-        <option value="CR12">Pays de la Loire</option>
-        <option value="CR13">Provence-Alpes-Côte d'Azur</option>
-      </select>
+  <div class="filters-bar" id="filters-bar">
+    <div class="filter-sheet-handle-bar"></div>
+    <div class="filters-inner">
+      <div class="field">
+        <select id="f-region" title="Région">
+          <option value="">Toutes les régions</option>
+          <option value="CR01">Auvergne-Rhône-Alpes</option>
+          <option value="CR02">Bourgogne-Franche-Comté</option>
+          <option value="CR03">Bretagne</option>
+          <option value="CR04">Centre-Val de Loire</option>
+          <option value="CR05">Corse</option>
+          <option value="CR06">Grand Est</option>
+          <option value="CR07">Hauts-de-France</option>
+          <option value="CR08">Île-de-France</option>
+          <option value="CR09">Normandie</option>
+          <option value="CR10">Nouvelle-Aquitaine</option>
+          <option value="CR11">Occitanie</option>
+          <option value="CR12">Pays de la Loire</option>
+          <option value="CR13">Provence-Alpes-Côte d'Azur</option>
+        </select>
+      </div>
+      <div class="field">
+        <select id="f-dept" title="Département"><option value="">Tous les départements</option></select>
+      </div>
+      <div class="field">
+        <select id="f-disc" title="Discipline"><option value="">Toutes les disciplines</option></select>
+      </div>
+      <div class="field search-field">
+        <input id="f-q" type="search" placeholder="🔍 Recherche…"/>
+      </div>
+      <div class="filter-actions-row">
+        <button id="btn-locate" class="btn-icon" title="Me localiser">📍 Me localiser</button>
+        <button id="btn-reset" class="btn-reset" title="Réinitialiser">✕ Réinitialiser</button>
+      </div>
     </div>
-    <div class="field">
-      <select id="f-dept" title="Département"><option value="">Tous les depts</option></select>
-    </div>
-    <div class="field">
-      <select id="f-disc" title="Discipline"><option value="">Toutes disciplines</option></select>
-    </div>
-    <div class="field search-field">
-      <input id="f-q" type="search" placeholder="🔍 Recherche…"/>
-    </div>
-    <button id="btn-locate" class="btn-icon" title="Me localiser">📍</button>
-    <button id="btn-reset" class="btn-reset" title="Réinitialiser">✕</button>
+  </div>
+  <div class="topbar-actions">
+    <button id="btn-filter-toggle" class="btn-icon btn-filter-toggle" title="Filtres" aria-label="Ouvrir les filtres">
+      <span class="filter-icon">⚙</span>
+      <span id="filter-badge" class="filter-badge" hidden></span>
+    </button>
+    <button id="btn-locate-top" class="btn-icon" title="Me localiser">📍</button>
+    <button id="btn-reset-top" class="btn-reset" title="Réinitialiser">✕</button>
   </div>
 </header>
+<div id="filter-backdrop" class="filter-backdrop"></div>
 
 <div class="app-body">
   <div id="map"></div>
 
   <aside id="panel" aria-label="Résultats filtrés">
+    <div class="panel-drag-handle" aria-hidden="true"></div>
     <div class="panel-head">
       <span id="panel-count" class="panel-count"></span>
       <button id="panel-close" class="panel-close" title="Fermer">✕</button>

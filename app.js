@@ -293,6 +293,7 @@ function applyFilters() {
 
   renderMarkers(list);
   if (list.length) fitMapToConcours(list);
+  window.updateFilterBadge?.();
 
   if (hasFilter(fv)) {
     renderPanel(list);
@@ -354,8 +355,50 @@ function renderPanel(list) {
 
 document.getElementById("panel-close").addEventListener("click", () => {
   document.body.classList.remove("panel-open");
-  setTimeout(() => map.invalidateSize(), 320);
+  setTimeout(() => map.invalidateSize(), 360);
 });
+
+// ── Mobile : filtre bottom sheet ───────────────────────────────────────────
+(function() {
+  const toggleBtn  = document.getElementById("btn-filter-toggle");
+  const backdrop   = document.getElementById("filter-backdrop");
+  const filtersBar = document.getElementById("filters-bar");
+  const badge      = document.getElementById("filter-badge");
+
+  function openFilters()  { document.body.classList.add("filters-open"); }
+  function closeFilters() { document.body.classList.remove("filters-open"); }
+
+  toggleBtn?.addEventListener("click", () => {
+    document.body.classList.toggle("filters-open");
+  });
+  backdrop?.addEventListener("click", closeFilters);
+
+  // Fermer le sheet quand on change un filtre (mobile UX)
+  ["f-region","f-dept","f-disc"].forEach(id => {
+    document.getElementById(id)?.addEventListener("change", () => {
+      if (window.innerWidth <= 820) setTimeout(closeFilters, 300);
+    });
+  });
+
+  // Mettre à jour le badge
+  window.updateFilterBadge = function() {
+    const fv = getFilterValues();
+    const count = [fv.region, fv.dept, fv.disc, fv.q, userLatLon].filter(Boolean).length;
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count; badge.hidden = false; }
+    else           { badge.hidden = true; }
+  };
+
+  // Boutons dupliqués topbar mobile (locate + reset)
+  document.getElementById("btn-locate-top")?.addEventListener("click", () => {
+    document.getElementById("btn-locate")?.click();
+    closeFilters();
+  });
+  document.getElementById("btn-reset-top")?.addEventListener("click", () => {
+    document.getElementById("btn-reset")?.click();
+    closeFilters();
+  });
+})();
 
 // ── Modal ──────────────────────────────────────────────────────────────────
 function initModal() {
