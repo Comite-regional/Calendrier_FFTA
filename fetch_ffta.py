@@ -1,22 +1,21 @@
 """
 Récupère les épreuves FFTA via l'API extranet et génère concours26.csv.
-Variables d'environnement requises :
-  FFTA_SESSION_IDENTITE  — identifiant de session FFTA
-Optionnelles :
-  FFTA_REGION            — code région (défaut : CR12)
+Variables d'environnement :
+  FFTA_SESSION_IDENTITE  — identifiant de session FFTA (obligatoire)
+  FFTA_REGION            — code ligue à filtrer (défaut : CR12)
   FFTA_SAISON            — année saison (défaut : année en cours)
   FFTA_ENV               — "prod" ou "pprod" (défaut : prod)
+  OUTPUT_CSV             — nom du fichier de sortie (défaut : concours26.csv)
 """
 
 import os
 import csv
-import json
-import time
+import re
 import datetime
 import requests
 from zoneinfo import ZoneInfo
 
-# ── Configuration ────────────────────────────────────────────────────────────
+# ── Config ────────────────────────────────────────────────────────────────────
 
 SESSION_IDENTITE = os.environ["FFTA_SESSION_IDENTITE"]
 REGION_CODE      = os.environ.get("FFTA_REGION", "CR12")
@@ -24,276 +23,243 @@ FFTA_ENV         = os.environ.get("FFTA_ENV", "prod")
 SAISON           = os.environ.get("FFTA_SAISON", str(datetime.date.today().year))
 OUTPUT_CSV       = os.environ.get("OUTPUT_CSV", "concours26.csv")
 
-HOST = "pprod-extranet.ffta.fr" if FFTA_ENV == "pprod" else "extranet.ffta.fr"
-BASE_HTTPS = f"https://{HOST}"
-BASE_HTTP  = f"http://{HOST}"
+HOST   = "pprod-extranet.ffta.fr" if FFTA_ENV == "pprod" else "extranet.ffta.fr"
+BASE   = f"https://{HOST}"
+PARIS  = ZoneInfo("Europe/Paris")
 
 HEADERS = {
     "accept": "application/json, */*;q=0.1",
-    "accept-language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+    "accept-language": "fr-FR,fr;q=0.9",
     "user-agent": "Mozilla/5.0",
     "origin": "https://extranet.ffta.fr",
     "referer": "https://extranet.ffta.fr/",
 }
 
-PARIS = ZoneInfo("Europe/Paris")
-
 # ── Utilitaires ───────────────────────────────────────────────────────────────
 
-def paris_timestamp(dt: datetime.datetime) -> str:
-    """Retourne YYYYMMDDHHmm en heure de Paris."""
-    p = dt.astimezone(PARIS)
-    return p.strftime("%Y%m%d%H%M")
-
+def paris_ts(dt: datetime.datetime) -> str:
+    return dt.astimezone(PARIS).strftime("%Y%m%d%H%M")
 
 def get_server_offset() -> datetime.timedelta:
-    """Calcule le décalage entre l'horloge locale et le serveur FFTA."""
-    for base in (BASE_HTTPS, BASE_HTTP):
-        try:
-            r = requests.head(base, timeout=5, headers=HEADERS)
-            date_header = r.headers.get("date") or r.headers.get("Date")
-            if date_header:
-                server_dt = datetime.datetime.strptime(
-                    date_header, "%a, %d %b %Y %H:%M:%S %Z"
-                ).replace(tzinfo=datetime.timezone.utc)
-                return server_dt - datetime.datetime.now(datetime.timezone.utc)
-        except Exception:
-            pass
+    try:
+        r = requests.head(BASE, timeout=5, headers=HEADERS)
+        dh = r.headers.get("date") or r.headers.get("Date")
+        if dh:
+            s = datetime.datetime.strptime(dh, "%a, %d %b %Y %H:%M:%S %Z").replace(
+                tzinfo=datetime.timezone.utc)
+            return s - datetime.datetime.now(datetime.timezone.utc)
+    except Exception:
+        pass
     return datetime.timedelta(0)
-
 
 def http_get(url: str) -> dict | None:
     try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        r.raise_for_status()
-        return r.json()
+        r = requests.get(url, headers=HEADERS, timeout=20)
+        if r.status_code == 200:
+            return r.json()
     except Exception:
-        return None
-
+        pass
+    return None
 
 def http_post(url: str, body: dict) -> dict | None:
     try:
-        r = requests.post(url, json=body, headers={**HEADERS, "Content-Type": "application/json"}, timeout=15)
-        r.raise_for_status()
-        return r.json()
+        r = requests.post(url, json=body,
+                          headers={**HEADERS, "Content-Type": "application/json"},
+                          timeout=20)
+        if r.status_code == 200:
+            return r.json()
     except Exception:
-        return None
+        pass
+    return None
 
+def qs(**params) -> str:
+    return "&".join(f"{k}={requests.utils.quote(str(v))}" for k, v in params.items())
 
 # ── Authentification ──────────────────────────────────────────────────────────
 
 def get_token() -> str:
-    offset = get_server_offset()
+    offset  = get_server_offset()
     base_dt = datetime.datetime.now(datetime.timezone.utc) + offset
 
-    get_paths = [
-        "/ws/rest/Parametres/GetToken",
-        "/ws/rest/ApplicationTierce/GetToken",
-        "/ws/Parametres/GetToken",
-        "/ws/ApplicationTierce/GetToken",
-    ]
-    post_paths = [
-        "/ws/Parametres.svc/GetToken",
-        "/ws/ApplicationTierce.svc/GetToken",
-    ]
+    get_paths  = ["/ws/rest/Parametres/GetToken", "/ws/rest/ApplicationTierce/GetToken",
+                  "/ws/Parametres/GetToken", "/ws/ApplicationTierce/GetToken"]
+    post_paths = ["/ws/Parametres.svc/GetToken", "/ws/ApplicationTierce.svc/GetToken"]
 
-    for minute_delta in [0, 1, 2, -1, -2]:
-        dt = base_dt + datetime.timedelta(minutes=minute_delta)
-        pw = paris_timestamp(dt)
-        qs = f"sessionIdentite={requests.utils.quote(SESSION_IDENTITE)}&password={pw}&format=json"
+    for delta in [0, 1, 2, -1, -2]:
+        pw = paris_ts(base_dt + datetime.timedelta(minutes=delta))
+        q  = qs(sessionIdentite=SESSION_IDENTITE, password=pw, format="json")
 
         for path in get_paths:
-            for base in (BASE_HTTPS, BASE_HTTP):
-                data = http_get(f"{base}{path}?{qs}")
-                tok = _extract_token(data)
-                if tok:
-                    print(f"Token obtenu via GET {path}")
-                    return tok
+            data = http_get(f"{BASE}{path}?{q}")
+            tok  = _extract_token(data)
+            if tok:
+                print(f"Token obtenu via GET {path}")
+                return tok
 
         body = {"sessionIdentite": SESSION_IDENTITE, "password": pw}
         for path in post_paths:
-            for base in (BASE_HTTPS, BASE_HTTP):
-                data = http_post(f"{base}{path}", body)
-                tok = _extract_token(data)
-                if tok:
-                    print(f"Token obtenu via POST {path}")
-                    return tok
+            data = http_post(f"{BASE}{path}", body)
+            tok  = _extract_token(data)
+            if tok:
+                print(f"Token obtenu via POST {path}")
+                return tok
 
-    raise RuntimeError("Impossible d'obtenir un token FFTA après toutes les tentatives.")
+    raise RuntimeError("Impossible d'obtenir un token FFTA.")
 
-
-def _extract_token(data: dict | None) -> str:
+def _extract_token(data) -> str:
     if not data:
         return ""
     resp = data.get("Response", data)
-    return resp.get("Token") or resp.get("token") or data.get("Token") or data.get("token") or ""
+    return (resp.get("Token") or resp.get("token") or
+            data.get("Token") or data.get("token") or "")
 
+# ── Récupération paginée des épreuves ────────────────────────────────────────
 
-# ── Appel GetEpreuves ─────────────────────────────────────────────────────────
+def get_all_epreuves(token: str) -> list[dict]:
+    today    = datetime.date.today().strftime("%d/%m/%Y")
+    date_fin = datetime.date(int(SAISON), 12, 31).strftime("%d/%m/%Y")
+    nb       = 200
+    page     = 1
+    all_rows = []
 
-def get_epreuves(token: str, region: str, saison: str) -> list[dict]:
-    today = datetime.date.today().strftime("%d/%m/%Y")
-    end   = datetime.date(int(saison), 12, 31).strftime("%d/%m/%Y")
+    while True:
+        params = dict(token=token, format="json",
+                      DateDebut=today, DateFin=date_fin,
+                      Page=str(page), NbResultats=str(nb))
+        url  = f"{BASE}/ws/rest/Calendrier/GetEpreuves?{qs(**params)}"
+        data = http_get(url)
 
-    params = {
-        "token": token,
-        "format": "json",
-        "RegionCode": region,
-        "DateDebut": today,
-        "DateFin": end,
-        "Page": "1",
-        "NbResultats": "500",
-    }
+        if not data:
+            print(f"Page {page} : aucune réponse.")
+            break
 
-    paths = [
-        "/ws/rest/Calendrier/GetEpreuves",
-        "/ws/Calendrier/GetEpreuves",
-        "/ws/Calendrier.svc/json/GetEpreuves",
-    ]
+        resp  = data.get("Response", data)
+        items = resp.get("tEpreuves") or []
 
-    for path in paths:
-        for base in (BASE_HTTPS, BASE_HTTP):
-            url = f"{base}{path}"
-            data = http_get(url + "?" + "&".join(f"{k}={requests.utils.quote(str(v))}" for k, v in params.items()))
-            rows = _extract_epreuves(data)
-            if rows is not None:
-                print(f"GetEpreuves OK : {len(rows)} épreuves via {path}")
-                return rows
+        if not items:
+            break
 
-    raise RuntimeError("GetEpreuves a échoué sur toutes les URLs connues.")
+        all_rows.extend(items)
+        print(f"Page {page} : {len(items)} épreuves (total {len(all_rows)})")
 
+        derniere = resp.get("DernierePage", page)
+        if page >= int(derniere):
+            break
+        page += 1
 
-def _extract_epreuves(data: dict | None) -> list[dict] | None:
-    if not data:
-        return None
-    resp = data.get("Response", data)
+    return all_rows
 
-    # L'API peut retourner un tableau directement ou sous une clé
-    for key in ("EpreuveArray", "Epreuve", "epreuves", "items", "data"):
-        val = resp.get(key)
-        if isinstance(val, list) and val:
-            return val
+# ── Normalisation champ département ──────────────────────────────────────────
 
-    # Objet indexé numériquement {"1": {...}, "2": {...}}
-    keys = list(resp.keys())
-    if keys and all(k.isdigit() for k in keys):
-        return [resp[k] for k in sorted(keys, key=int)]
+def normalize_dept(raw: str) -> str:
+    """"44000" → "44", "01000" → "01", DOM 971xx → "971" """
+    s = str(raw or "").strip()
+    m = re.match(r"^(\d{2,3})0+$", s)
+    if m:
+        return m.group(1)
+    m2 = re.match(r"^(\d{2,3})", s)
+    if m2:
+        return m2.group(1)
+    return s
 
-    # Tableau direct
-    if isinstance(resp, list):
-        return resp
-
-    return None
-
-
-# ── Normalisation → CSV ───────────────────────────────────────────────────────
-
-def _s(*fields, src: dict, default="") -> str:
-    for f in fields:
-        v = src.get(f)
-        if v is not None and str(v).strip():
-            return str(v).strip()
-    return default
-
-
-def normalize_date(raw: str) -> str:
-    """Tente de retourner DD/MM/YYYY depuis plusieurs formats."""
-    raw = str(raw or "").strip()
-    if not raw:
-        return ""
-    # Déjà DD/MM/YYYY
-    if len(raw) == 10 and raw[2] == "/" and raw[5] == "/":
-        return raw
-    # ISO YYYY-MM-DD
-    if len(raw) >= 10 and raw[4] == "-" and raw[7] == "-":
-        y, m, d = raw[:10].split("-")
-        return f"{d}/{m}/{y}"
-    # Timestamp YYYYMMDD...
-    if len(raw) >= 8 and raw[:8].isdigit():
-        return f"{raw[6:8]}/{raw[4:6]}/{raw[:4]}"
-    return raw
-
+# ── Mapping épreuve → ligne CSV ───────────────────────────────────────────────
 
 def epreuve_to_row(e: dict) -> dict:
-    title  = _s("EprvLibelle", "Libelle", "NomEpreuve", "Titre", "libelle", src=e)
-    deb    = normalize_date(_s("EprvDateDebut", "DateDebut", "date_debut", "DateDeb", src=e))
-    fin    = normalize_date(_s("EprvDateFin", "DateFin", "date_fin", "DateFin", src=e))
-    ville  = _s("EprvVille", "Ville", "VilleEpreuve", "commune", src=e)
-    cp     = _s("EprvCP", "CodePostal", "CP", "cp", src=e)
-    lieu   = _s("EprvLieuTir", "LieuTir", "Lieu", "lieu", src=e)
-    adresse= _s("EprvAdresse", "Adresse", "adresse", src=e)
+    def iso_to_fr(s):
+        s = str(s or "").strip()
+        if re.match(r"^\d{4}-\d{2}-\d{2}", s):
+            y, m, d = s[:10].split("-")
+            return f"{d}/{m}/{y}"
+        return s
 
-    code_struct = _s("StructureId", "CodeStructure", "EprvStructureId", "code_structure", src=e)
-    club        = _s("StructureNom", "StructureNomCourt", "Club", "club", "NomClub", src=e)
-    region      = _s("RegionCode", "CodeRegion", "LigueCode", "region_code", src=e) or REGION_CODE
-    dept        = _s("DepartementCode", "CodeDepartement", "dept", "departement", src=e)
+    def gps(val):
+        v = str(val or "").strip()
+        return "" if v in ("0", "0.0", "") else v
 
-    discipline  = _s("DisciplineLibelle", "Discipline", "disc", "discipline_libelle", src=e)
-    type_eprv   = _s("EprvType", "Type", "TypeEpreuve", "type", src=e)
+    deb  = iso_to_fr(e.get("EprvDateDebut"))
+    fin  = iso_to_fr(e.get("EprvDateFin"))
 
-    lat         = _s("EprvLatitude", "Latitude", "lat", src=e)
-    lon         = _s("EprvLongitude", "Longitude", "long", "lon", src=e)
+    bat  = str(e.get("AdresseBatiment") or "").strip()
+    voie = " ".join(filter(None, [
+        str(e.get("AdresseNumVoie") or ""),
+        str(e.get("AdresseTypeVoie") or ""),
+        str(e.get("AdresseNomVoie") or ""),
+    ])).strip()
+    lieu = bat if bat else voie
 
-    mandat_raw  = _s("EprvMandatUrl", "MandatUrl", "Mandat", "mandat", src=e)
-    mandat      = mandat_raw if mandat_raw.startswith("http") else (
-                  f"https://www.ffta.fr{mandat_raw}" if mandat_raw else "")
+    # Mandat : premier document
+    mandat = ""
+    docs = e.get("Documents") or []
+    if isinstance(docs, list) and docs:
+        url = str(docs[0].get("DocUrl") or "").strip()
+        if url:
+            mandat = url if url.startswith("http") else f"https://www.ffta.fr{url}"
 
-    mail        = _s("ContactEmail", "Email", "Mail", "mail", src=e)
-    site        = _s("EprvSiteWeb", "SiteWeb", "Site", "site", src=e)
+    type_map = {"I": "individuel", "E": "par équipe", "U": "uniquement équipe"}
+    etype = type_map.get(str(e.get("EprvType") or ""), str(e.get("EprvType") or ""))
 
     return {
-        "Date debut":          deb,
-        "Date fin":            fin,
-        "Titre compétition":   title,
-        "Ville":               ville,
-        "Code structure":      code_struct,
-        "Club organisateur":   club,
-        "Code region":         region,
-        "Departement":         dept,
-        "Discipline":          discipline,
-        "Type":                type_eprv,
-        "Saison":              saison,
-        "Mail":                mail,
-        "Site web":            site,
-        "Lieu":                lieu,
-        "Adresse":             adresse,
-        "CP":                  cp,
-        "Ville compétition":   ville,
-        "Long":                lon,
-        "Lat":                 lat,
-        "Mandat":              mandat,
+        "Date debut":         deb,
+        "Date fin":           fin,
+        "Titre compétition":  str(e.get("EprvNom") or "").strip(),
+        "Ville":              str(e.get("EprvLieu") or "").strip(),
+        "Code structure":     str(e.get("StructureCode") or e.get("StructureId") or "").strip(),
+        "Club organisateur":  str(e.get("StructureNom") or "").strip(),
+        "Code region":        str(e.get("LigueCode") or "").strip(),
+        "Departement":        normalize_dept(e.get("DepartementCode")),
+        "Discipline":         str(e.get("DisciplineCode") or "").strip(),
+        "Type":               etype,
+        "Saison":             str(e.get("SaisonAnnee") or SAISON),
+        "Mail":               str(e.get("ContactsAdresseMail") or "").strip(),
+        "Site web":           str(e.get("ContactsAdrWeb") or "").strip(),
+        "Lieu":               lieu,
+        "Adresse":            voie,
+        "CP":                 str(e.get("AdresseCodePostal") or "").strip(),
+        "Ville compétition":  str(e.get("AdresseCommune") or "").strip(),
+        "Long":               gps(e.get("AdresseLongitude")),
+        "Lat":                gps(e.get("AdresseLatitude")),
+        "Mandat":             mandat,
+        "Etat":               str(e.get("EprvEtat") or "").strip(),
+        "EprvId":             str(e.get("EprvId") or "").strip(),
     }
-
 
 # ── Point d'entrée ────────────────────────────────────────────────────────────
 
+FIELDNAMES = [
+    "Date debut", "Date fin", "Titre compétition", "Ville",
+    "Code structure", "Club organisateur", "Code region", "Departement",
+    "Discipline", "Type", "Saison",
+    "Mail", "Site web", "Lieu", "Adresse", "CP", "Ville compétition",
+    "Long", "Lat", "Mandat", "Etat", "EprvId",
+]
+
 def main():
-    print(f"Récupération des épreuves FFTA — région {REGION_CODE}, saison {SAISON}")
+    print(f"Récupération épreuves FFTA — filtre {REGION_CODE}, saison {SAISON}")
 
     token    = get_token()
-    epreuves = get_epreuves(token, REGION_CODE, SAISON)
+    epreuves = get_all_epreuves(token)
+    print(f"\nTotal récupéré : {len(epreuves)} épreuves (toute France)")
 
-    if not epreuves:
-        raise RuntimeError("Aucune épreuve retournée par l'API FFTA.")
+    # Filtre région côté client sur LigueCode
+    filtered = [e for e in epreuves if str(e.get("LigueCode") or "") == REGION_CODE]
+    print(f"Après filtre {REGION_CODE} : {len(filtered)} épreuves")
 
-    rows = [epreuve_to_row(e) for e in epreuves]
+    # Exclure les annulées
+    filtered = [e for e in filtered if str(e.get("EprvEtatCode") or "") != "X"]
+    print(f"Après exclusion annulées : {len(filtered)} épreuves")
+
+    if not filtered:
+        raise RuntimeError(f"Aucune épreuve trouvée pour {REGION_CODE}.")
+
+    rows = [epreuve_to_row(e) for e in filtered]
     rows.sort(key=lambda r: r["Date debut"])
 
-    fieldnames = [
-        "Date debut", "Date fin", "Titre compétition", "Ville",
-        "Code structure", "Club organisateur", "Code region", "Departement",
-        "Discipline", "Type", "Saison",
-        "Mail", "Site web", "Lieu", "Adresse", "CP", "Ville compétition",
-        "Long", "Lat", "Mandat",
-    ]
-
     with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=";", extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES, delimiter=";", extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"✅ {len(rows)} épreuves écrites dans {OUTPUT_CSV}")
-
+    print(f"\n✅ {len(rows)} épreuves écrites dans {OUTPUT_CSV}")
 
 if __name__ == "__main__":
     main()
