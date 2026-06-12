@@ -57,6 +57,7 @@ a { color: inherit; text-decoration: none; }
 .btn-icon:hover { background: rgba(255,255,255,.25); }
 .btn-reset { background: rgba(255,80,80,.25); color: #fff; }
 .btn-reset:hover { background: rgba(255,80,80,.40); }
+.btn-text { display: none; }
 
 /* ── App body ──────────────────────────────────────────────────────────── */
 .app-body {
@@ -225,6 +226,7 @@ body.filters-open .filter-backdrop { display: block; }
     border: 1px solid rgba(15,23,42,.12);
   }
   .field select option { background: #fff; color: #0f172a; }
+  .btn-text { display: inline; }
   .filter-actions-row .btn-icon,
   .filter-actions-row .btn-reset {
     flex: 1; height: 46px; border-radius: 12px;

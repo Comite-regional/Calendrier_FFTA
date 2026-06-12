@@ -181,7 +181,8 @@ function addLegend() {
       .map(([k, label]) => {
         const bg  = DISC_COLOR[k]  || "#94a3b8";
         const brd = DISC_BORDER[k] || "rgba(0,0,0,.3)";
-        return `<div class="leg-row"><span class="leg-dot" style="background:${bg};border-color:${brd}"></span>${label}</div>`;
+        const bw  = k === "campagne" ? "3px" : "2px";
+        return `<div class="leg-row"><span class="leg-dot" style="background:${bg};border-color:${brd};border-width:${bw}"></span>${label}</div>`;
       }).join("");
     return div;
   };
@@ -192,9 +193,10 @@ function makeIcon(disc) {
   const k   = discKey(disc);
   const bg  = DISC_COLOR[k]  || "#94a3b8";
   const brd = DISC_BORDER[k] || "rgba(0,0,0,.35)";
+  const bw  = k === "campagne" ? "3px" : "2px";
   return L.divIcon({
     className: "",
-    html: `<div style="width:14px;height:14px;border-radius:999px;background:${bg};border:2px solid ${brd};box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
+    html: `<div style="width:14px;height:14px;border-radius:999px;background:${bg};border:${bw} solid ${brd};box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
     iconSize: [14, 14], iconAnchor: [7, 7],
   });
 }
